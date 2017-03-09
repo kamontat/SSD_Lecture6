@@ -13,11 +13,7 @@ import java.awt.event.MouseEvent;
 import java.util.Observable;
 import java.util.Observer;
 
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
+import javax.swing.*;
 
 import game.Game;
 import game.network.GameClient;
@@ -42,7 +38,7 @@ public class MultiPlayerGui extends JFrame implements Observer {
 	
 	public MultiPlayerGui() {
 		super("SSD - Tic Tac Toe Multiplayer");
-		setDefaultCloseOperation(EXIT_ON_CLOSE);
+		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		setAlwaysOnTop(true);
 		
 		game = new Game();
@@ -117,17 +113,17 @@ public class MultiPlayerGui extends JFrame implements Observer {
 		
 		if (Game.class == arg.getClass()) {
 			this.game = (Game) arg;
+			((TablePanel) mainPanel).newGame(game);
 		}
 		
 		refreshGui();
+		
 	}
 	
 	public void refreshGui() {
-		((TablePanel) mainPanel).newGame(game);
 		
 		if (!(isServer && game.isP1Turn()) || (isClient && game.isP2Turn())) {
 			infoText.setText("Your Turn");
-			mainPanel.setEnabled(false);
 		} else {
 			infoText.setText("Your Opponent's Turn");
 		}
@@ -143,7 +139,7 @@ public class MultiPlayerGui extends JFrame implements Observer {
 		
 		@Override
 		public void mousePressed(MouseEvent e) {
-			if (!(isServer && game.isP1Turn()) || (isClient && game.isP2Turn())) {
+			if (!((isServer && game.isP1Turn()) || (isClient && game.isP2Turn()))) {
 				return;
 			}
 			if (game.isEnd()) {
