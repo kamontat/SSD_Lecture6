@@ -25,16 +25,16 @@ import game.network.GameServer;
 import game.network.Network;
 
 public class MultiPlayerGui extends JFrame implements Observer {
-
+	
 	public static final int WINDOW_SIZE = 300;
-
+	
 	private Game game;
 	private GameServer gameServer;
 	private GameClient gameClient;
 	
 	private boolean isServer;
 	private boolean isClient;
-
+	
 	private JLabel infoText;
 	private JPanel mainPanel;
 	private JButton startServerButton;
@@ -44,128 +44,122 @@ public class MultiPlayerGui extends JFrame implements Observer {
 		super("SSD - Tic Tac Toe Multiplayer");
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setAlwaysOnTop(true);
+		
+		game = new Game();
+		
 		initComponents();
 	}
-
+	
 	public void start() {
-		game = new Game();
 		gameServer = new GameServer();
 		gameServer.addObserver(this);
 		gameClient = new GameClient();
 		gameClient.addObserver(this);
+		
 		pack();
 		setVisible(true);
 	}
-
+	
 	public void startServer() {
-		// TODO: Complete the logic here
+		gameServer.start();
+		isServer = true;
+		infoText.setText("Server Started");
 	}
-
+	
 	public void startClient() {
-		// TODO: Complete the logic here
+		gameClient.connect();
+		isClient = true;
+		infoText.setText("Client Connected");
 	}
-
+	
 	private void initComponents() {
 		setSize(WINDOW_SIZE, WINDOW_SIZE);
-		mainPanel = new JPanel() {
-			@Override
-			public void paint(Graphics g) {
-				super.paint(g);
-				drawBackground(g);
-				drawLines(g);
-				drawSymbols(g);
-			}
-		};
+		mainPanel = new TablePanel(WINDOW_SIZE, game);
+		
 		mainPanel.setPreferredSize(new Dimension(WINDOW_SIZE, WINDOW_SIZE));
 		mainPanel.addMouseListener(new MouseHandler());
 		setLayout(new BorderLayout());
 		add(mainPanel, BorderLayout.CENTER);
-
+		
 		infoText = new JLabel(" Welcome to Tic-Tac-Toe");
 		infoText.setFont(new Font(infoText.getName(), Font.PLAIN, 20));
 		add(infoText, BorderLayout.NORTH);
-
+		
 		add(new JPanel() {
 			{
 				setLayout(new FlowLayout(FlowLayout.CENTER));
 				startServerButton = new JButton("Start Server");
-				startServerButton.addActionListener(new ActionListener() {
-
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						startServer();
-					}
-				});
+				startServerButton.addActionListener(e -> startServer());
 				add(startServerButton);
 				startClientButton = new JButton("Start Client");
-				startClientButton.addActionListener(new ActionListener() {
-
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						startClient();
-					}
-				});
+				startClientButton.addActionListener(e -> startClient());
 				add(startClientButton);
 			}
 		}, BorderLayout.SOUTH);
 	}
-
-	private void drawBackground(Graphics g) {
-		g.setColor(Color.lightGray);
-		g.fillRect(0, 0, WINDOW_SIZE, WINDOW_SIZE);
-	}
-
-	private void drawLines(Graphics g) {
-		int gap = squareSize();
-		g.setColor(Color.black);
-		for (int i = 0; i < Game.BOARD_SIZE; i++) {
-			g.drawLine(0, i * gap, WINDOW_SIZE, i * gap);
-			g.drawLine(i * gap, 0, i * gap, WINDOW_SIZE);
-		}
-	}
-
-	private void drawSymbols(Graphics g) {
-		int gap = squareSize();
-		for (int row = 0; row < game.getBoardSize(); row++) {
-			for (int col = 0; col < game.getBoardSize(); col++) {
-				int y = row * gap + gap / 2;
-				int x = col * gap + gap / 2;
-				String symbol = game.getSymbolOnBoard(row, col);
-				if (symbol != null) {
-					g.drawString(symbol, x, y);
-				}
-			}
-		}
-	}
-
+	
 	private int squareSize() {
 		return WINDOW_SIZE / Game.BOARD_SIZE;
 	}
-
+	
+	private int[] toPosition(MouseEvent e) {
+		int row = e.getY() / squareSize();
+		int col = e.getX() / squareSize();
+		return new int[]{row, col};
+	}
+	
 	@Override
 	public void update(Observable o, Object arg) {
-		// TODO: Complete the logic here
+		if (arg.equals(Network.CONNECT)) {
+			game.start();
+			refreshGui();
+		}
+		
+		if (Game.class == arg.getClass()) {
+			this.game = (Game) arg;
+		}
+		
+		refreshGui();
 	}
-
+	
 	public void refreshGui() {
-		if((isServer && game.isP1Turn()) || (isClient && game.isP2Turn())) {
+		((TablePanel) mainPanel).newGame(game);
+		
+		if (!(isServer && game.isP1Turn()) || (isClient && game.isP2Turn())) {
 			infoText.setText("Your Turn");
+			mainPanel.setEnabled(false);
 		} else {
 			infoText.setText("Your Opponent's Turn");
 		}
 		mainPanel.repaint();
-		if(game.isEnd()) {
+		
+		if (game.isEnd()) {
 			JOptionPane.showMessageDialog(this, game.getWinnerName() + " Win!");
+			game = new Game();
 		}
 	}
 	
 	private class MouseHandler extends MouseAdapter {
-
+		
 		@Override
 		public void mousePressed(MouseEvent e) {
-			int row = e.getY() / squareSize();
-			int col = e.getX() / squareSize();
-			// TODO: Complete the logic here
+			if (!(isServer && game.isP1Turn()) || (isClient && game.isP2Turn())) {
+				return;
+			}
+			if (game.isEnd()) {
+				return;
+			}
+			
+			int[] pos = toPosition(e);
+			try {
+				game.currentPlayerTakesAction(pos[0], pos[1]);
+			} catch (NullPointerException ne) {
+				System.out.println("game not start");
+			}
+			
+			refreshGui();
+			gameServer.send(game);
+			gameClient.send(game);
 		}
 	}
 	
@@ -173,5 +167,5 @@ public class MultiPlayerGui extends JFrame implements Observer {
 		MultiPlayerGui gui = new MultiPlayerGui();
 		gui.start();
 	}
-
+	
 }
