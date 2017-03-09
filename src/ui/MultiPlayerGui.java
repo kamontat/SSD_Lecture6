@@ -1,28 +1,18 @@
 package ui;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.Observable;
-import java.util.Observer;
-
-import javax.swing.*;
-
 import game.Game;
 import game.network.GameClient;
 import game.network.GameServer;
 import game.network.Network;
 
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.*;
+
 public class MultiPlayerGui extends JFrame implements Observer {
-	
-	public static final int WINDOW_SIZE = 300;
+	private static final int WINDOW_SIZE = 300;
 	
 	private Game game;
 	private GameServer gameServer;
@@ -37,7 +27,7 @@ public class MultiPlayerGui extends JFrame implements Observer {
 	private JButton startClientButton;
 	
 	public MultiPlayerGui() {
-		super("SSD - Tic Tac Toe Multiplayer");
+		super("SSD - Tic Tac Toe Multi-player");
 		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		setAlwaysOnTop(true);
 		
@@ -60,12 +50,20 @@ public class MultiPlayerGui extends JFrame implements Observer {
 		gameServer.start();
 		isServer = true;
 		infoText.setText("Server Started");
+		System.out.println("Server Started");
+		startServerButton.setEnabled(false);
+		startClientButton.setEnabled(false);
 	}
 	
 	public void startClient() {
 		gameClient.connect();
 		isClient = true;
+		
 		infoText.setText("Client Connected");
+		System.out.println("Client Connected");
+		
+		startServerButton.setEnabled(false);
+		startClientButton.setEnabled(false);
 	}
 	
 	private void initComponents() {
@@ -114,24 +112,21 @@ public class MultiPlayerGui extends JFrame implements Observer {
 		if (Game.class == arg.getClass()) {
 			this.game = (Game) arg;
 			((TablePanel) mainPanel).newGame(game);
+			refreshGui();
 		}
-		
-		refreshGui();
-		
 	}
 	
 	public void refreshGui() {
-		
-		if (!(isServer && game.isP1Turn()) || (isClient && game.isP2Turn())) {
+		if ((isServer && game.isP1Turn()) || (isClient && game.isP2Turn())) {
 			infoText.setText("Your Turn");
 		} else {
 			infoText.setText("Your Opponent's Turn");
 		}
-		mainPanel.repaint();
 		
+		mainPanel.repaint();
 		if (game.isEnd()) {
 			JOptionPane.showMessageDialog(this, game.getWinnerName() + " Win!");
-			game = new Game();
+			infoText.setText(game.getWinnerName() + " Win!");
 		}
 	}
 	
